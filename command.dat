@@ -1,0 +1,4 @@
+@echo off
+pip install pyinstaller
+pyi-makespec -F -i icon.ico cpolar_ssh.py
+pyinstaller cpolar_ssh.spec

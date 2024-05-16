@@ -13,20 +13,30 @@ def main():
     cfg_path=BASE_DIR+'/user.cfg'
     
     config_parser = configparser.ConfigParser()
-    config_parser.read(cfg_path)
+    config_parser.read(cfg_path,encoding='utf-8')
+    
+    #print(cfg_path)
+    
     config_login_original = config_parser.get('login','login')
     config_password_original = config_parser.get('login','password')
     config_user_original = config_parser.get('user','user')
+    config_mode_original = config_parser.get('mode','mode')
+    
+    #print(config_login_original+"  "+config_password_original+"  "+config_user_original)
     # 读取配置文件中的账号和密码
     login=""
     password=""
     user=""
+    mode=""
     for i in range(1,len(config_login_original)-1):
       login+=config_login_original[i]
     for i in range(1,len(config_password_original)-1):
       password+=config_password_original[i]
     for i in range(1,len(config_user_original)-1):
       user+=config_user_original[i]
+    for i in range(1,len(config_mode_original)-1):
+      mode+=config_mode_original[i]
+    #print(login+"  "+password+"  "+user)
     # 去除账号和密码中的特殊字符
     #注意，此处有一个大坑，因为configparser读取的账号和密码中，会包含一些特殊字符，比如：‘ ,所以需要我们手动去除这些特殊字符
     login_data = {
@@ -53,24 +63,49 @@ def main():
 
     html=etree.HTML(response.text)
     # 解析html文件
-    xpath_result = "/html/body/div[5]/div/div[2]/div[2]/table/tbody/tr[1]/th/a"
-    tunnle_ip=html.xpath(xpath_result)[0]
+    #print(response.text)
+    xpath_result_1 = "/html/body/div[5]/div/div[2]/div[2]/table/tbody/tr[1]/th/a"
+    xpath_result_2 = "/html/body/div[5]/div/div[2]/div[2]/table/tbody/tr[2]/th/a"
+    xpath_result_3 = "/html/body/div[5]/div/div[2]/div[2]/table/tbody/tr[3]/th/a"
+    #非会员用户只有三个目标值
     
+    tunnle_ip_1=html.xpath(xpath_result_1)[0]
+    tunnle_ip_2=html.xpath(xpath_result_2)[0]
+    tunnle_ip_3=html.xpath(xpath_result_3)[0]
+    # print(tunnle_ip)
     # 获取tcp地址
     # 使用xpath获取对应的ssh地址
     # 最后如果不转码会是个 bytes 类型数据
-    string = etree.tostring(tunnle_ip, encoding='utf-8').decode('utf-8')     
-    
+    string_1 = etree.tostring(tunnle_ip_1, encoding='utf-8').decode('utf-8')     
+    string_2 = etree.tostring(tunnle_ip_2, encoding='utf-8').decode('utf-8')     
+    string_3 = etree.tostring(tunnle_ip_3, encoding='utf-8').decode('utf-8')     
+    #print(string)
     import re 
-    herf_content=re.split('<|>',string)
-    tcp_ip=[tcp_index for tcp_index in herf_content if "tcp" in tcp_index]
+    herf_content_1=re.split('<|>',string_1)
+    herf_content_2=re.split('<|>',string_2)
+    herf_content_3=re.split('<|>',string_3)
+    #print(herf_content)
     
-    tcp_ip_string=tcp_ip.__str__().strip('[')
-    tcp_ip_string=tcp_ip_string.strip(']')
-    tcp_ip=re.split(':',tcp_ip_string)
-    tcp_ip[1]=tcp_ip[1].strip('/')
-    tcp_ip[2]=tcp_ip[2].strip('\'')
-    command = "ssh {user}@{tcp_ip_dns} -p {tcp_ip_port}".format(user=user,tcp_ip_dns=tcp_ip[1],tcp_ip_port=tcp_ip[2])
+    tcp_ip=[]
+    tcp_ip.append([tcp_index for tcp_index in herf_content_1 if "tcp" or "https" in tcp_index])
+    tcp_ip.append([tcp_index for tcp_index in herf_content_2 if "tcp" or "https" in tcp_index])
+    tcp_ip.append([tcp_index for tcp_index in herf_content_3 if "tcp" or "https" in tcp_index])
+    
+    #for i in range(3):
+      #print(tcp_ip[i][2])
+      
+    #print(tcp_ip)
+    print(mode)
+    for i in range(3):
+      if ("http" in tcp_ip[i][2]) and mode=="https":
+        command="{https}".format(https=tcp_ip[i][2])
+        break
+        # print(command)
+      else:
+        #print(tcp_ip[i][2])
+        #print(re.split(':|/',tcp_ip[i][2]))
+        command = "ssh {user}@{tcp_ip_dns} -p {tcp_ip_port}".format(user=user,tcp_ip_dns=re.split(':|/',tcp_ip[i][2])[3],tcp_ip_port=re.split(':|/',tcp_ip[i][2])[4])
+        break
     pyperclip.copy(command)
       
       
